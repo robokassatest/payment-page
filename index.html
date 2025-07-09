@@ -2,54 +2,99 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Оплата</title>
     <style>
-        /* Подключаем шрифт Montserrat */
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap');
-
         body {
-            font-family: 'Montserrat', Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
             background-color: #f5f5f5;
-            padding: 50px; /* Отступы от краев */
         }
-
-        .container {
-            text-align: left;
-            max-width: 600px;
-        }
-
         h1 {
-            font-size: 36px;
-            font-weight: 700;
             color: #333;
-            margin-bottom: 20px;
         }
-
-        p {
-            font-size: 18px;
-            font-weight: 400;
-            color: #666;
-            margin-bottom: 30px;
-        }
-
-        iframe {
-            border: none;
+        input, button {
             width: 100%;
-            height: 500px;
-            margin-top: 20px;
-            background-color: transparent;
+            padding: 12px;
+            margin: 10px 0;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        input {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Оплата услуг</h1>
-        <p>Укажите сумму и нажмите на кнопку «Оплатить».</p>
-        <!-- Вставьте сюда код из Robokassa -->
-        <script type="text/javascript" src="https://auth.robokassa.ru/Merchant/PaymentForm/FormFLS.js?EncodedInvoiceId=4CfMXW3sf0qTuOgSAxg36g&DefaultSum=1000"></script>
-    </div>
+    <h1>Оплата услуг</h1>
+    <p>Введите сумму для оплаты (руб):</p>
+    
+    <input type="number" id="paymentSum" placeholder="Например, 1000" min="1">
+    <button onclick="processPayment()">Оплатить</button>
+
+    <script>
+        // =============================================
+        // ⚠️ НАСТРОЙКИ ДЛЯ РОБОКАССЫ (замените на свои!)
+        const MERCHANT_LOGIN = "testoviymagazin21";  // MerchantLogin из кабинета
+        const MERCHANT_PASS1 = "rk3kAvm876krf8ppFdpi";      // Пароль №1 (для подписи платежа)
+        const MERCHANT_PASS2 = "O6Fcp8S1Ebsjv3Wyxgj8";      // Пароль №2 (для уведомлений)
+        const PRODUCT_NAME = "Разработка сайта";      // Название товара в чеке
+        const TAX_RATE = "none";                     // Ставка налога (none/vat0/vat10/vat20)
+        // =============================================
+
+        function processPayment() {
+            const sum = document.getElementById('paymentSum').value;
+            
+            if (!sum || sum < 1) {
+                alert("Введите корректную сумму!");
+                return;
+            }
+
+            // Формируем чек для 54-ФЗ
+            const receipt = {
+                items: [{
+                    name: PRODUCT_NAME,
+                    quantity: 1,
+                    sum: sum,
+                    payment_method: 'full_payment',
+                    payment_object: 'service', // 'commodity' для товаров
+                    tax: TAX_RATE
+                }]
+            };
+
+            // Кодируем параметры
+            const receiptEncoded = encodeURIComponent(JSON.stringify(receipt));
+            const invId = 0; // 0 - автоинкремент
+            
+            // Формируем подпись (MD5 на основе Пароля №1)
+            const crc = CryptoJS.MD5(`${MERCHANT_LOGIN}:${sum}:${invId}:${receiptEncoded}:${MERCHANT_PASS1}`).toString();
+            
+            // Переход на страницу оплаты
+            window.location.href = 
+                `https://auth.robokassa.ru/Merchant/Index.aspx?` +
+                `MrchLogin=${MERCHANT_LOGIN}&` +
+                `OutSum=${sum}&` +
+                `InvId=${invId}&` +
+                `Receipt=${receiptEncoded}&` +
+                `Desc=-&` + // Прочерк вместо описания
+                `SignatureValue=${crc}`;
+        }
+    </script>
+    
+    <!-- Библиотека для MD5 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </body>
 </html>

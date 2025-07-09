@@ -32,12 +32,9 @@
             border: none;
             cursor: pointer;
         }
-        #debug {
+        #payment-link {
             margin-top: 20px;
-            padding: 15px;
-            background: white;
-            border: 1px solid #ddd;
-            text-align: left;
+            word-break: break-all;
         }
     </style>
 </head>
@@ -46,9 +43,8 @@
     <input type="number" id="paymentSum" placeholder="Сумма в рублях" min="1" value="100">
     <button onclick="processPayment()">Оплатить</button>
     
-    <div id="debug">
-        <h3>Отладочная информация:</h3>
-        <div id="debugOutput"></div>
+    <div id="payment-link" style="display:none;">
+        <p>Если автоматический переход не сработал, <a id="manual-link" href="#">нажмите сюда</a></p>
     </div>
 
     <script>
@@ -58,10 +54,6 @@
         const PRODUCT_NAME = "Разработка сайта";
         // ===============================================
 
-        function debugLog(message) {
-            document.getElementById('debugOutput').innerHTML += message + '<br><br>';
-        }
-
         function processPayment() {
             const sum = document.getElementById('paymentSum').value;
             if (!sum || sum < 1) {
@@ -69,19 +61,7 @@
                 return;
             }
 
-            // Вариант 1: Без Receipt (старый формат)
-            const signatureString1 = `${MERCHANT_LOGIN}:${sum}:0:${MERCHANT_PASS1}`;
-            const crc1 = CryptoJS.MD5(signatureString1).toString();
-            const paymentUrl1 = 
-                `https://auth.robokassa.ru/Merchant/Index.aspx?` +
-                `MrchLogin=${MERCHANT_LOGIN}&` +
-                `OutSum=${sum}&` +
-                `InvId=0&` +
-                `Desc=${encodeURIComponent(PRODUCT_NAME)}&` +
-                `IsTest=1&` +
-                `SignatureValue=${crc1}`;
-
-            // Вариант 2: С Receipt (новый формат)
+            // Формируем чек
             const receipt = {
                 items: [{
                     name: PRODUCT_NAME,
@@ -92,32 +72,30 @@
                     tax: 'none'
                 }]
             };
+
+            // Кодируем параметры
             const receiptEncoded = encodeURIComponent(JSON.stringify(receipt));
-            const signatureString2 = `${MERCHANT_LOGIN}:${sum}:0:${receiptEncoded}:${MERCHANT_PASS1}`;
-            const crc2 = CryptoJS.MD5(signatureString2).toString();
-            const paymentUrl2 = 
+            
+            // Вариант подписи, который сработал при возврате
+            const signatureString = `${MERCHANT_LOGIN}:${sum}:0::${MERCHANT_PASS1}`;
+            const crc = CryptoJS.MD5(signatureString).toString();
+            
+            // Формируем URL (без Receipt, как в рабочем случае)
+            const paymentUrl = 
                 `https://auth.robokassa.ru/Merchant/Index.aspx?` +
                 `MrchLogin=${MERCHANT_LOGIN}&` +
                 `OutSum=${sum}&` +
                 `InvId=0&` +
-                `Receipt=${receiptEncoded}&` +
-                `Desc=-&` +
+                `Desc=${encodeURIComponent(PRODUCT_NAME)}&` +
                 `IsTest=1&` +
-                `SignatureValue=${crc2}`;
+                `SignatureValue=${crc}`;
 
-            // Вывод отладочной информации
-            debugLog(`<b>Вариант 1 (без Receipt):</b><br>${signatureString1}<br>Подпись: ${crc1}<br>URL: ${paymentUrl1}`);
-            debugLog(`<b>Вариант 2 (с Receipt):</b><br>${signatureString2}<br>Подпись: ${crc2}<br>URL: ${paymentUrl2}`);
-
-            // Пробуем сначала новый формат, потом старый
-            debugLog("Пробуем Вариант 2 (новый формат)...");
-            window.location.href = paymentUrl2;
+            // Показываем ссылку для ручного перехода
+            document.getElementById('manual-link').href = paymentUrl;
+            document.getElementById('payment-link').style.display = 'block';
             
-            // Если не сработает, через 3 секунды пробуем старый формат
-            setTimeout(() => {
-                debugLog("Пробуем Вариант 1 (старый формат)...");
-                window.location.href = paymentUrl1;
-            }, 3000);
+            // Автоматический переход
+            window.location.href = paymentUrl;
         }
     </script>
     

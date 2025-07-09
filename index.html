@@ -4,63 +4,21 @@
     <meta charset="UTF-8">
     <title>Оплата услуг</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
-            background-color: #f5f5f5;
-        }
-        h1 {
-            color: #333;
-        }
-        input, button {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            box-sizing: border-box;
-            font-size: 16px;
-            border-radius: 4px;
-        }
-        input {
-            border: 1px solid #ddd;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        #debug {
-            margin-top: 20px;
-            padding: 15px;
-            background: white;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
+        body { font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; text-align: center; }
+        input, button { width: 100%; padding: 12px; margin: 10px 0; font-size: 16px; }
+        button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
     <h1>Оплата услуг</h1>
     <input type="number" id="paymentSum" placeholder="Сумма в рублях" min="1" value="100">
     <button onclick="processPayment()">Оплатить</button>
-    
-    <div id="debug">
-        <h3>Отладочная информация:</h3>
-        <div id="debugOutput"></div>
-    </div>
 
     <script>
-        // ================== НАСТРОЙКИ ==================
+        // Настройки (замените на свои)
         const MERCHANT_LOGIN = "testoviymagazin21";
         const MERCHANT_PASS1 = "rk3kAvm876krf8ppFdpi";
         const PRODUCT_NAME = "Разработка сайта";
-        // ===============================================
-
-        function debugLog(message) {
-            document.getElementById('debugOutput').innerHTML += message + '<br><br>';
-        }
 
         function processPayment() {
             const sum = document.getElementById('paymentSum').value;
@@ -69,8 +27,8 @@
                 return;
             }
 
-            // Вариант 1: Самый простой формат подписи (без Receipt и InvId)
-            const signatureString = `${MERCHANT_LOGIN}:${sum}:${MERCHANT_PASS1}`;
+            // Правильный формат подписи
+            const signatureString = `${MERCHANT_LOGIN}:${sum}:0:${MERCHANT_PASS1}`;
             const crc = CryptoJS.MD5(signatureString).toString();
             
             const paymentUrl = 
@@ -82,14 +40,11 @@
                 `IsTest=1&` +
                 `SignatureValue=${crc}`;
 
-            debugLog(`<b>Строка для подписи:</b> ${signatureString}`);
-            debugLog(`<b>MD5 подпись:</b> ${crc}`);
-            debugLog(`<b>Полный URL:</b> ${paymentUrl}`);
-
+            console.log("Подпись:", signatureString);
+            console.log("URL:", paymentUrl);
             window.location.href = paymentUrl;
         }
     </script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </body>
 </html>

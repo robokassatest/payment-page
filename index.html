@@ -32,9 +32,12 @@
             border: none;
             cursor: pointer;
         }
-        #payment-link {
+        #debug {
             margin-top: 20px;
-            word-break: break-all;
+            padding: 15px;
+            background: white;
+            border: 1px solid #ddd;
+            text-align: left;
         }
     </style>
 </head>
@@ -43,8 +46,9 @@
     <input type="number" id="paymentSum" placeholder="Сумма в рублях" min="1" value="100">
     <button onclick="processPayment()">Оплатить</button>
     
-    <div id="payment-link" style="display:none;">
-        <p>Если автоматический переход не сработал, <a id="manual-link" href="#">нажмите сюда</a></p>
+    <div id="debug">
+        <h3>Отладочная информация:</h3>
+        <div id="debugOutput"></div>
     </div>
 
     <script>
@@ -54,6 +58,10 @@
         const PRODUCT_NAME = "Разработка сайта";
         // ===============================================
 
+        function debugLog(message) {
+            document.getElementById('debugOutput').innerHTML += message + '<br><br>';
+        }
+
         function processPayment() {
             const sum = document.getElementById('paymentSum').value;
             if (!sum || sum < 1) {
@@ -61,26 +69,10 @@
                 return;
             }
 
-            // Формируем чек
-            const receipt = {
-                items: [{
-                    name: PRODUCT_NAME,
-                    quantity: 1,
-                    sum: Number(sum),
-                    payment_method: 'full_payment',
-                    payment_object: 'service',
-                    tax: 'none'
-                }]
-            };
-
-            // Кодируем параметры
-            const receiptEncoded = encodeURIComponent(JSON.stringify(receipt));
-            
-            // Вариант подписи, который сработал при возврате
-            const signatureString = `${MERCHANT_LOGIN}:${sum}:0::${MERCHANT_PASS1}`;
+            // Вариант 1: Самый простой формат подписи (без Receipt и InvId)
+            const signatureString = `${MERCHANT_LOGIN}:${sum}:${MERCHANT_PASS1}`;
             const crc = CryptoJS.MD5(signatureString).toString();
             
-            // Формируем URL (без Receipt, как в рабочем случае)
             const paymentUrl = 
                 `https://auth.robokassa.ru/Merchant/Index.aspx?` +
                 `MrchLogin=${MERCHANT_LOGIN}&` +
@@ -90,11 +82,10 @@
                 `IsTest=1&` +
                 `SignatureValue=${crc}`;
 
-            // Показываем ссылку для ручного перехода
-            document.getElementById('manual-link').href = paymentUrl;
-            document.getElementById('payment-link').style.display = 'block';
-            
-            // Автоматический переход
+            debugLog(`<b>Строка для подписи:</b> ${signatureString}`);
+            debugLog(`<b>MD5 подпись:</b> ${crc}`);
+            debugLog(`<b>Полный URL:</b> ${paymentUrl}`);
+
             window.location.href = paymentUrl;
         }
     </script>

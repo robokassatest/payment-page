@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Оплата</title>
+    <title>Оплата услуг</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -46,14 +46,18 @@
     <button onclick="processPayment()">Оплатить</button>
 
     <script>
-        // =============================================
-        // ⚠️ НАСТРОЙКИ ДЛЯ РОБОКАССЫ (замените на свои!)
-        const MERCHANT_LOGIN = "testoviymagazin21";  // MerchantLogin из кабинета
-        const MERCHANT_PASS1 = "rk3kAvm876krf8ppFdpi";      // Пароль №1 (для подписи платежа)
-        const MERCHANT_PASS2 = "O6Fcp8S1Ebsjv3Wyxgj8";      // Пароль №2 (для уведомлений)
-        const PRODUCT_NAME = "Разработка сайта";      // Название товара в чеке
-        const TAX_RATE = "none";                     // Ставка налога (none/vat0/vat10/vat20)
-        // =============================================
+        // ==================================================
+        // ⚠️ ТЕСТОВЫЕ НАСТРОЙКИ (из кабинета Робокассы)
+        // Обязательно проверьте:
+        // 1. MerchantLogin и пароли взяты из РАЗДЕЛА "ТЕСТОВЫЕ ПАРОЛИ"
+        // 2. Тестовый режим активирован в настройках магазина
+        // ==================================================
+        const MERCHANT_LOGIN = "testoviymagazin21";      // Ваш тестовый логин
+        const MERCHANT_PASS1 = "rk3kAvm876krf8ppFdpi";  // Тестовый Пароль №1
+        const MERCHANT_PASS2 = "O6Fcp8S1Ebsjv3Wyxgj8";  // Тестовый Пароль №2
+        const PRODUCT_NAME = "Разработка сайта";         // Название в чеке
+        const TAX_RATE = "none";                        // Ставка налога (none/vat0/vat10/vat20)
+        // ==================================================
 
         function processPayment() {
             const sum = document.getElementById('paymentSum').value;
@@ -63,38 +67,41 @@
                 return;
             }
 
-            // Формируем чек для 54-ФЗ
+            // 1. Формируем чек для 54-ФЗ
             const receipt = {
                 items: [{
                     name: PRODUCT_NAME,
                     quantity: 1,
                     sum: sum,
                     payment_method: 'full_payment',
-                    payment_object: 'service', // 'commodity' для товаров
+                    payment_object: 'service', // Для товаров укажите 'commodity'
                     tax: TAX_RATE
                 }]
             };
 
-            // Кодируем параметры
+            // 2. Кодируем параметры
             const receiptEncoded = encodeURIComponent(JSON.stringify(receipt));
             const invId = 0; // 0 - автоинкремент
             
-            // Формируем подпись (MD5 на основе Пароля №1)
-            const crc = CryptoJS.MD5(`${MERCHANT_LOGIN}:${sum}:${invId}:${receiptEncoded}:${MERCHANT_PASS1}`).toString();
-            
-            // Переход на страницу оплаты
+            // 3. Формируем подпись (MD5)
+            // Важно! Порядок параметров: MerchantLogin:OutSum:InvId:Receipt:MerchantPass1
+            const signatureString = `${MERCHANT_LOGIN}:${sum}:${invId}:${receiptEncoded}:${MERCHANT_PASS1}`;
+            const crc = CryptoJS.MD5(signatureString).toString();
+
+            // 4. Переход на страницу оплаты (с тестовым режимом)
             window.location.href = 
                 `https://auth.robokassa.ru/Merchant/Index.aspx?` +
                 `MrchLogin=${MERCHANT_LOGIN}&` +
                 `OutSum=${sum}&` +
                 `InvId=${invId}&` +
                 `Receipt=${receiptEncoded}&` +
-                `Desc=-&` + // Прочерк вместо описания
+                `Desc=-&` + // Описание (прочерк)
+                `IsTest=1&` + // ⚠️ Тестовый режим (обязательно!)
                 `SignatureValue=${crc}`;
         }
     </script>
     
-    <!-- Библиотека для MD5 -->
+    <!-- Библиотека для MD5 (обязательная) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </body>
 </html>

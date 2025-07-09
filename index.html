@@ -8,109 +8,66 @@
             font-family: 'Arial', sans-serif;
             max-width: 500px;
             margin: 0 auto;
-            padding: 25px;
+            padding: 20px;
             background-color: #f8f9fa;
-            color: #333;
         }
-        .payment-container {
+        .payment-box {
             background: white;
-            padding: 30px;
+            padding: 25px;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         h1 {
             color: #2c3e50;
             text-align: center;
-            margin-bottom: 5px;
-            font-size: 24px;
-        }
-        .subtitle {
-            text-align: center;
-            color: #7f8c8d;
-            margin-bottom: 25px;
-            font-size: 16px;
+            margin-bottom: 10px;
         }
         input {
             width: 100%;
-            padding: 15px;
-            margin: 10px 0 20px;
+            padding: 12px;
+            margin: 10px 0;
             border: 1px solid #ddd;
-            border-radius: 6px;
+            border-radius: 5px;
             font-size: 16px;
-            box-sizing: border-box;
         }
         button {
             width: 100%;
-            padding: 15px;
+            padding: 12px;
             background-color: #27ae60;
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 5px;
             font-size: 16px;
             cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #2ecc71;
-        }
-        .footer {
-            margin-top: 20px;
-            text-align: center;
-            color: #95a5a6;
-            font-size: 14px;
+            margin-top: 15px;
         }
     </style>
 </head>
 <body>
-    <div class="payment-container">
+    <div class="payment-box">
         <h1>Оплата товаров/услуг</h1>
-        <p class="subtitle">Введите сумму для оплаты</p>
-        
-        <input type="number" id="paymentSum" placeholder="Например: 1500" min="1">
-        <button onclick="processPayment()">Перейти к оплате</button>
-        
-        <div class="footer">
-            Платежи защищены Robokassa
-        </div>
+        <p>Введите сумму для оплаты:</p>
+        <input type="number" id="paymentSum" placeholder="Например: 1000" min="1">
+        <button onclick="pay()">Оплатить</button>
     </div>
 
     <script>
-        // ================== НАСТРОЙКИ ==================
+        // Настройки магазина (замените на свои)
         const MERCHANT_LOGIN = "testoviymagazin21";
-        const MERCHANT_PASS1 = "rk3kAvm876krf8ppFdpi";
+        const MERCHANT_PASS1 = "rk3kAvm876krf8ppFdpi"; 
         const PRODUCT_NAME = "Разработка сайта";
-        const TAX_SYSTEM = "osn";
-        const TAX_RATE = "none";
-        const PAYMENT_METHOD = "full_payment";
-        const PAYMENT_OBJECT = "service";
-        // ===============================================
 
-        function processPayment() {
+        function pay() {
             const sum = document.getElementById('paymentSum').value;
             if (!sum || sum < 1) {
-                alert("Пожалуйста, введите корректную сумму!");
+                alert("Введите корректную сумму!");
                 return;
             }
 
-            // 1. Формируем фискальные данные (не включаем в подпись)
-            const receipt = {
-                sno: TAX_SYSTEM,
-                items: [{
-                    name: PRODUCT_NAME,
-                    quantity: 1,
-                    sum: Number(sum),
-                    payment_method: PAYMENT_METHOD,
-                    payment_object: PAYMENT_OBJECT,
-                    tax: TAX_RATE
-                }]
-            };
-            const receiptEncoded = encodeURIComponent(JSON.stringify(receipt));
-
-            // 2. Формируем подпись (БЕЗ Receipt - рабочий вариант)
-            const signatureString = `${MERCHANT_LOGIN}:${sum}:0:${MERCHANT_PASS1}`;
-            const crc = CryptoJS.MD5(signatureString).toString();
+            // Формируем подпись (самый простой рабочий вариант)
+            const signature = CryptoJS.MD5(`${MERCHANT_LOGIN}:${sum}:0:${MERCHANT_PASS1}`).toString();
             
-            // 3. Формируем URL с фискальными данными как доп. параметр
+            // Формируем URL оплаты
             const paymentUrl = 
                 `https://auth.robokassa.ru/Merchant/Index.aspx?` +
                 `MrchLogin=${MERCHANT_LOGIN}&` +
@@ -118,9 +75,9 @@
                 `InvId=0&` +
                 `Desc=${encodeURIComponent(PRODUCT_NAME)}&` +
                 `IsTest=1&` +
-                `shp_receipt=${receiptEncoded}&` + // Фискальные данные
-                `SignatureValue=${crc}`;
+                `SignatureValue=${signature}`;
 
+            // Переход на оплату
             window.location.href = paymentUrl;
         }
     </script>

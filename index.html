@@ -59,6 +59,15 @@
             color: #95a5a6;
             font-size: 14px;
         }
+        #debug {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f1f1f1;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -66,8 +75,14 @@
         <h1>Оплата товаров/услуг</h1>
         <p class="subtitle">Введите сумму для оплаты</p>
         
-        <input type="number" id="paymentSum" placeholder="Например: 1500" min="1">
+        <input type="number" id="paymentSum" placeholder="Например: 1500" min="1" value="100">
         <button onclick="processPayment()">Перейти к оплате</button>
+        <button onclick="document.getElementById('debug').style.display='block'">Показать отладку</button>
+        
+        <div id="debug">
+            <h3>Отладочная информация:</h3>
+            <div id="debugOutput"></div>
+        </div>
         
         <div class="footer">
             Платежи защищены Robokassa
@@ -75,10 +90,19 @@
     </div>
 
     <script>
-        // Настройки
+        // ================== НАСТРОЙКИ ==================
         const MERCHANT_LOGIN = "testoviymagazin21";
         const MERCHANT_PASS1 = "rk3kAvm876krf8ppFdpi";
         const PRODUCT_NAME = "Разработка сайта";
+        const TAX_SYSTEM = "osn";
+        const TAX_RATE = "none";
+        const PAYMENT_METHOD = "full_payment";
+        const PAYMENT_OBJECT = "service";
+        // ===============================================
+
+        function debugLog(message) {
+            document.getElementById('debugOutput').innerHTML += message + '<br><br>';
+        }
 
         function processPayment() {
             const sum = document.getElementById('paymentSum').value;
@@ -87,17 +111,52 @@
                 return;
             }
 
-            const signatureString = `${MERCHANT_LOGIN}:${sum}:0:${MERCHANT_PASS1}`;
-            const crc = CryptoJS.MD5(signatureString).toString();
+            // 1. Формируем чек
+            const receipt = {
+                sno: TAX_SYSTEM,
+                items: [{
+                    name: PRODUCT_NAME,
+                    quantity: 1,
+                    sum: Number(sum),
+                    payment_method: PAYMENT_METHOD,
+                    payment_object: PAYMENT_OBJECT,
+                    tax: TAX_RATE
+                }]
+            };
+
+            // 2. Кодируем параметры
+            const receiptString = JSON.stringify(receipt);
+            const receiptEncoded = encodeURIComponent(receiptString);
+            const invId = 0;
             
-            window.location.href = 
-                `https://auth.robokassa.ru/Merchant/Index.aspx?` +
-                `MrchLogin=${MERCHANT_LOGIN}&` +
-                `OutSum=${sum}&` +
-                `InvId=0&` +
-                `Desc=${encodeURIComponent(PRODUCT_NAME)}&` +
-                `IsTest=1&` +
-                `SignatureValue=${crc}`;
+            // 3. Вариант 1: Подпись С Receipt (новый формат)
+            const signature1 = `${MERCHANT_LOGIN}:${sum}:${invId}:${receiptEncoded}:${MERCHANT_PASS1}`;
+            const crc1 = CryptoJS.MD5(signature1).toString();
+            const url1 = `https://auth.robokassa.ru/Merchant/Index.aspx?MrchLogin=${MERCHANT_LOGIN}&OutSum=${sum}&InvId=${invId}&Receipt=${receiptEncoded}&Desc=${encodeURIComponent(PRODUCT_NAME)}&IsTest=1&SignatureValue=${crc1}`;
+            
+            // 4. Вариант 2: Подпись БЕЗ Receipt (старый формат)
+            const signature2 = `${MERCHANT_LOGIN}:${sum}:${invId}:${MERCHANT_PASS1}`;
+            const crc2 = CryptoJS.MD5(signature2).toString();
+            const url2 = `https://auth.robokassa.ru/Merchant/Index.aspx?MrchLogin=${MERCHANT_LOGIN}&OutSum=${sum}&InvId=${invId}&Desc=${encodeURIComponent(PRODUCT_NAME)}&IsTest=1&SignatureValue=${crc2}`;
+
+            // Отладочная информация
+            debugLog("<b>Вариант 1 (с Receipt):</b>");
+            debugLog("Подпись: " + signature1);
+            debugLog("URL: " + url1);
+            
+            debugLog("<b>Вариант 2 (без Receipt):</b>");
+            debugLog("Подпись: " + signature2);
+            debugLog("URL: " + url2);
+
+            // Пробуем сначала новый формат
+            debugLog("Пробуем вариант 1 (с Receipt)...");
+            window.location.href = url1;
+            
+            // Если не сработает, через 3 секунды пробуем старый формат
+            setTimeout(() => {
+                debugLog("Пробуем вариант 2 (без Receipt)...");
+                window.location.href = url2;
+            }, 3000);
         }
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
